@@ -113,7 +113,7 @@ Point the launcher to this file via `--dataset_cfg config/dataset_config/mixed_o
 ---
 
 
-## 5. Quick Start (Full Pipeline) ▶️
+## 5. Training Start ▶️
 
 ```bash
 bash train.sh
