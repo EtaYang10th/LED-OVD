@@ -1,0 +1,29 @@
+{
+  "train": [
+    {
+      "root": "path/to/object365/train",
+      "anno": "config/object365_trian.json",
+      "label_map": "config/object365_label_map.json",
+      "dataset_mode": "odvg"
+    },
+    {
+      "root": "path/to/coco/train2017",
+      "anno": "config/coco2odvg_train2017.json",
+      "label_map": "config/coco2017_label_map.json",
+      "dataset_mode": "odvg"
+    },
+    {
+      "root": "path/to/flickr30k_images/",
+      "anno": "config/flickr30k_entities_odvg.jsonl",
+      "dataset_mode": "odvg"
+    }
+  ],
+  "val": [
+    {
+      "root": "path/to/omnilabel",
+      "anno": "path/to/omnilabel/dataset_all_val_v0.1.3.json",
+      "label_map": null,
+      "dataset_mode": "omni"
+    }
+  ]
+}
