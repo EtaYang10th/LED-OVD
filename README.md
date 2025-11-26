@@ -7,8 +7,8 @@
   <a href="https://arxiv.org/abs/2503.13794">
     <img src="https://img.shields.io/badge/arXiv-2503.13794-b31b1b.svg" alt="arXiv">
   </a>
-  <a href="https://github.com/EtaYang10th/Open-LED/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/EtaYang10th/Open-LED" alt="License">
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
   </a>
 </p>
 
