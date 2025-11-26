@@ -1,5 +1,18 @@
 # LED
+<p align="center">
+<img src="led_logo.png"  width="140" />
+</p>
 
+<p align="center">
+  <a href="https://arxiv.org/abs/2503.13794">
+    <img src="https://img.shields.io/badge/arXiv-2503.13794-b31b1b.svg" alt="arXiv">
+  </a>
+  <a href="https://github.com/EtaYang10th/Open-LED/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/EtaYang10th/Open-LED" alt="License">
+  </a>
+</p>
+
+---
 LED introduces a knowledge‑fusion paradigm for open‑vocabulary object detection: a lightweight adapter directly injects intermediate hidden states from a multimodal large language model (MLLM) into the detector decoder. This removes the need for synthetic data and costly annotations, preserves high‑dimensional pretrained semantics, and strengthens grounding for free‑form text. The approach is model‑agnostic and plugs into mainstream detectors, forming a unified knowledge‑injection pipeline. Systematic studies of layer selection, injection modality, and adapter structure yield effective practices and practical guidelines for deploying LED in real‑world settings.
 
 <p align="center">
