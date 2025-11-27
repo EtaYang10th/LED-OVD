@@ -1,4 +1,4 @@
-# LED
+# 《LED: LLM Enhanced Open-Vocabulary Object Detection without Human Curated Data Generation》
 <p align="center">
 <img src="led_logo.png"  width="140" />
 </p>
