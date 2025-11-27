@@ -208,21 +208,21 @@ def main(args):
     ########## add model ##########
     if args.llm_modelname == "InternVL2-1B":
         from transformers import AutoTokenizer, AutoModel, CLIPImageProcessor
-        llm_model = AutoModel.from_pretrained("REDACTED/InternVL2-1B", trust_remote_code=True, torch_dtype=torch.float16)
-        tokenizer = AutoTokenizer.from_pretrained("REDACTED/InternVL2-1B", trust_remote_code=True)
-        image_processor = CLIPImageProcessor.from_pretrained("REDACTED/InternVL2-1B")
+        llm_model = AutoModel.from_pretrained("OpenGVLab/InternVL2-1B", trust_remote_code=True, torch_dtype=torch.float16)
+        tokenizer = AutoTokenizer.from_pretrained("OpenGVLab/InternVL2-1B", trust_remote_code=True)
+        image_processor = CLIPImageProcessor.from_pretrained("OpenGVLab/InternVL2-1B")
         llm_model.to(device)
     elif args.llm_modelname == "InternVL2-2B":
         from transformers import AutoTokenizer, AutoModel, CLIPImageProcessor
-        llm_model = AutoModel.from_pretrained("REDACTED/InternVL2-2B", trust_remote_code=True, torch_dtype=torch.float16)
-        tokenizer = AutoTokenizer.from_pretrained("REDACTED/InternVL2-2B", trust_remote_code=True)
-        image_processor = CLIPImageProcessor.from_pretrained("REDACTED/InternVL2-2B")
+        llm_model = AutoModel.from_pretrained("OpenGVLab/InternVL2-2B", trust_remote_code=True, torch_dtype=torch.float16)
+        tokenizer = AutoTokenizer.from_pretrained("OpenGVLab/InternVL2-2B", trust_remote_code=True)
+        image_processor = CLIPImageProcessor.from_pretrained("OpenGVLab/InternVL2-2B")
         llm_model.to(device)
     elif args.llm_modelname == "InternVL2-8B":
         from transformers import AutoTokenizer, AutoModel, CLIPImageProcessor
-        llm_model = AutoModel.from_pretrained("REDACTED/InternVL2-8B", trust_remote_code=True, torch_dtype=torch.float16)
-        tokenizer = AutoTokenizer.from_pretrained("REDACTED/InternVL2-8B", trust_remote_code=True)
-        image_processor = CLIPImageProcessor.from_pretrained("REDACTED/InternVL2-8B")
+        llm_model = AutoModel.from_pretrained("OpenGVLab/InternVL2-8B", trust_remote_code=True, torch_dtype=torch.float16)
+        tokenizer = AutoTokenizer.from_pretrained("OpenGVLab/InternVL2-8B", trust_remote_code=True)
+        image_processor = CLIPImageProcessor.from_pretrained("OpenGVLab/InternVL2-8B")
         llm_model.to(device)
     else:
         raise ValueError("llm_modelname not supported")
