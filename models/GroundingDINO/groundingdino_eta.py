@@ -55,7 +55,7 @@ from preprocess.preprocessing_function import *
 
 
 class GroundingDINO_Eta(nn.Module):
-    """This is the Cross-Attention Detector module that performs object detection"""
+    """GroundingDINO model variant with transformer extensions."""
 
     def __init__(
         self,
@@ -291,20 +291,18 @@ class GroundingDINO_Eta(nn.Module):
         bs, h_, w_, c = x.shape
         if h_ < h:
             pad_h = h - h_
-            x = F.pad(x, (0, 0, 0, 0, 0, pad_h), "constant", 0)  # 填充高度维度（倒数第三维）
+            x = F.pad(x, (0, 0, 0, 0, 0, pad_h), "constant", 0)  # Pad height (3rd dim from end).
         if w_ < w:
             pad_w = w - w_
-            x = F.pad(x, (0, 0, 0, pad_w, 0, 0), "constant", 0)  # 填充宽度维度（倒数第二维）
+            x = F.pad(x, (0, 0, 0, pad_w, 0, 0), "constant", 0)  # Pad width (2nd dim from end).
         return x
 
     def forward(self, samples: NestedTensor, targets: List = None,
                 images_hidden_states=None, masks=None, position_embedding=None,
                 hw=None, text_embeds=None, **kw):
-        """
-        The forward expects a NestedTensor, ...
-        """
+        """Forward pass."""
         # --------------------------
-        # 1) 处理文本部分 (不变)
+        # 1) Text branch
         # --------------------------
         if targets is None:
             captions = kw["captions"]
@@ -322,7 +320,7 @@ class GroundingDINO_Eta(nn.Module):
             tokenized, self.specical_tokens, self.tokenizer
         )
 
-        # truncate到self.max_text_len (同原逻辑)
+        # Truncate to self.max_text_len (same as original logic).
         if text_self_attention_masks.shape[1] > self.max_text_len:
             text_self_attention_masks = text_self_attention_masks[:, : self.max_text_len, : self.max_text_len]
             position_ids = position_ids[:, : self.max_text_len]
@@ -355,7 +353,7 @@ class GroundingDINO_Eta(nn.Module):
         }
 
         # --------------------------
-        # 2) 处理图像部分
+        # 2) Image branch
         # --------------------------
         input_query_bbox = input_query_label = attn_mask = dn_meta = None
         adapter = None
@@ -365,40 +363,40 @@ class GroundingDINO_Eta(nn.Module):
             images_hidden_states = [tensor.float() for tensor in images_hidden_states]
             if text_embeds is not None:
                 text_embeds[0] = text_embeds[0].float()
-        # 位置编码
+        # Positional embeddings
         if position_embedding is not None and not self.args.deepspeed:
             position_embedding = [tensor.float() for tensor in position_embedding]
         else:
             position_embedding = []
             position_embed = True
 
-        # ========== 2.1 InternVL2-2B + [upsample_cat / hidden_states] ==========
+        # 2.1 InternVL2-2B + [upsample_cat / hidden_states]
         if self.args.llm_modelname == "InternVL2-2B" and self.args.encoder_type in ["upsample_cat", "hidden_states"]:
-            # 只取 images_hidden_states[0]、masks[0]、hw[0]
-            hidden_states = images_hidden_states[0]  # [bs, hw, c] by your design
+            # Use only images_hidden_states[0], masks[0], hw[0].
+            hidden_states = images_hidden_states[0]  # [bs, hw, c]
             mask = masks[0]
             h_o, w_o = hw[0]
 
-            # 重置
+            # Reset containers.
             masks = []
             images_hidden_states = []
             hw = []
 
-            # 先把 hidden_states 还原回 (bs, c, h, w)，以便后续多层卷积
+            # Convert back to (bs, c, h, w) for conv processing.
             hidden_states = self.unflatten_nlc(hidden_states, h_o, w_o)  # [bs, c, h_o, w_o]
             bs, c, _, _ = hidden_states.shape
 
             for idx, layer in enumerate(self.fc_proj_shuffle):
-                # 1) 做 layer 卷积
+                # 1) Conv projection
                 hidden_states_temp = layer(hidden_states)  # [bs, c, h', w']
                 bs, c2, h, w = hidden_states_temp.shape
                 hw.append([h, w])
-                # 2) 如果是第 2 层，保存一份 src (可按你需求决定是否 flatten)
+                # 2) Keep a copy as src at idx==2.
                 if idx == 2:
                     src = hidden_states_temp  # (bs, c2, h, w)
                 # 3) input_proj
                 hidden_states_temp = self.input_proj[idx](hidden_states_temp)  # [bs, 256, h, w]
-                # 4) 如果 encoder_type == "hidden_states"，需要 position_embedding 和 mask
+                # 4) For encoder_type == "hidden_states", build mask + positional embedding.
                 if position_embed and self.args.encoder_type == "hidden_states":
                     mask_temp = F.interpolate(
                         mask.unsqueeze(1).float(), size=(h, w), mode='nearest'
@@ -410,21 +408,21 @@ class GroundingDINO_Eta(nn.Module):
                     position_embedding.append(pe)
                     masks.append(mask_temp)
 
-                # 5) 最后再 flatten 到 (bs, hw, c) 供 images_hidden_states 记录
+                # 5) Flatten to (bs, hw, c) for images_hidden_states.
                 hidden_states_temp = self.flatten_nlc(hidden_states_temp)  # [bs, h*w, 256]
                 images_hidden_states.append(hidden_states_temp)
 
 
-            # 对最后一层的 src 再 input_proj[-1]
+            # Apply input_proj[-1] on the last src.
             src = self.input_proj[-1](src)  # [bs, 256, h', w']
             hw.append([src.shape[2], src.shape[3]])
             # flatten
             src_flat = self.flatten_nlc(src)
             images_hidden_states.append(src_flat)
 
-            # 如果 encoder_type == "hidden_states"，还需要给 position_embedding + masks
+            # For encoder_type == "hidden_states", also build final mask + pos embed.
             if position_embed and self.args.encoder_type == "hidden_states":
-                # 用 src 生成最后一层 mask
+                # Build a final-level mask from src.
                 mask_final = torch.zeros(
                     src.shape[2], src.shape[3], dtype=torch.bool
                 ).repeat(src.shape[0], 1, 1).to(src.device)
@@ -435,15 +433,15 @@ class GroundingDINO_Eta(nn.Module):
                 ).to(src.dtype)
                 position_embedding.append(pe_final)
 
-        # ========== 2.2 InternVL2-2B + ["fusion", "adapter"] ==========
+        # 2.2 InternVL2-2B + ["fusion"]
         elif self.args.llm_modelname == "InternVL2-2B" and self.args.encoder_type in ["fusion"]:
-            # 只进行一次 resz_internvl_hidden_states
+            # Single linear resize for InternVL hidden states.
             images_hidden_states[0] = self.resz_internvl_hidden_states(images_hidden_states[0])
 
         adapter = None
-        # ========== 2.3 若 encoder_type != "hidden_states"，常规 Swin backbone ==========
+        # 2.3 If encoder_type != "hidden_states": run Swin backbone.
         if self.args.encoder_type != "hidden_states":
-            # 正常走 Swin Transformer
+            # Standard Swin backbone path.
             if isinstance(samples, (list, torch.Tensor)):
                 samples = nested_tensor_from_tensor_list(samples)
             features, position_embedding_swin = self.backbone(samples)
@@ -454,7 +452,7 @@ class GroundingDINO_Eta(nn.Module):
                 src_l = self.input_proj[l](src_l)  # [bs, 256, H, W]
                 srcs.append(src_l)
                 masks_.append(mask_l)
-            # 如果多层 feature level
+            # Add extra feature levels (if requested).
             if self.num_feature_levels > len(srcs):
                 _len_srcs = len(srcs)
                 for l in range(_len_srcs, self.num_feature_levels):
@@ -469,22 +467,21 @@ class GroundingDINO_Eta(nn.Module):
                     masks_.append(mask_l)
                     position_embedding_swin.append(pos_l)
 
-            # 特定模式
+            # Encoder-type specific fusion/adaptation.
             if self.args.encoder_type == "upsample_cat":
-                # 将 images_hidden_states[l] 上采样并加到 srcs[l]
-                # 注：images_hidden_states[l] 此时应为 [bs, hw, c]
-                #     => 先 unflatten => upsample => conv => 再加
-                bs = srcs[0].shape[0]  # 这里默认 batchsize
+                # Upsample images_hidden_states[l] and fuse into srcs[l].
+                # images_hidden_states[l] is [bs, hw, c] -> unflatten -> upsample -> conv -> fuse.
+                bs = srcs[0].shape[0]  # batch size
                 for l in range(len(srcs)):
                     # unflatten
                     temp = self.unflatten_nlc(images_hidden_states[l], hw[l][0], hw[l][1]) 
                     up_sample = nn.Upsample(size=srcs[l].shape[-2:], mode='bilinear')
                     temp = up_sample(temp)  # [bs, c, H, W]
                     temp = self.conv_hidden(temp)  # [bs, c, H, W]
-                    srcs[l] = self.alpha * temp + srcs[l]  # 融合
+                    srcs[l] = self.alpha * temp + srcs[l]  # fuse
 
             elif self.args.encoder_type == "fusion":
-                # 仅对 srcs[0] 融合 hidden_states
+                # Fuse hidden states into srcs[0] only.
                 hidden_states_0 = images_hidden_states[0]  # [bs, hw, c]
                 hidden_states_0 = self.resz_hidden_states(hidden_states_0) 
                 # [bs, c, H, W] -> flatten
@@ -496,25 +493,23 @@ class GroundingDINO_Eta(nn.Module):
                 fused_src = self.unflatten_nlc(fused_src, H, W)
                 srcs[0] = srcs[0] + self.alpha * fused_src
 
-            # 最终输出到 srcs, masks, position_embedding
-            # (此时 position_embedding_swin 仍是 [bs, c, H, W]，可以在 transformer 里再 flatten)
+            # Final outputs for transformer.
             position_embedding = position_embedding_swin
             masks = masks_
 
-        # ========== 2.4 若 encoder_type == "hidden_states" ==========
+        # 2.4 If encoder_type == "hidden_states"
         if self.args.encoder_type == "hidden_states":
-            # 在这个分支，images_hidden_states 里已经是 [bs, hw, c] 形状
-            # 需要还原成 [bs, c, h, w] 供后面 transformer 用
+            # images_hidden_states entries are [bs, hw, c]; restore to [bs, c, h, w] for transformer.
             srcs = []
             bs = images_hidden_states[0].shape[0]
             for l in range(len(images_hidden_states)):
                 src_l = self.unflatten_nlc(images_hidden_states[l], hw[l][0], hw[l][1])  # [bs, c, h, w]
                 srcs.append(src_l)
-            # masks, position_embedding 在上面 if 里已经构造了
+            # masks and position_embedding are prepared above.
 
-        # ========== 2.5 encoder_type == "adapter" ==========
+        # 2.5 encoder_type == "adapter"
         elif self.args.encoder_type == "adapter":
-            # 对 text_embeds 与 images_hidden_states[0] 做 cross-attn
+            # Cross-attend image hidden states to text embeddings.
             img_embed_adapter, _ = self.cross_attn_hidden_text(images_hidden_states[0], text_embeds[0], text_embeds[0])
             # img_embed_adapter = self.ffn_norm(img_embed_adapter) + images_hidden_states[0]
             img_embed_adapter = self.unflatten_nlc(img_embed_adapter,hw[0][0],hw[0][1]) 
@@ -560,7 +555,7 @@ class GroundingDINO_Eta(nn.Module):
 
 
         # --------------------------
-        # 3) 调用 self.transformer
+        # 3) Run transformer
         # --------------------------
         hs, reference, hs_enc, ref_enc, init_box_proposal = self.transformer(
             srcs=srcs,
@@ -624,15 +619,6 @@ class GroundingDINO_Eta(nn.Module):
             out['interm_outputs'] = {'pred_logits': interm_class, 'pred_boxes': interm_coord}
             out['interm_outputs_for_matching_pre'] = {'pred_logits': interm_class, 'pred_boxes': init_box_proposal}
 
-        # outputs['pred_logits'].shape:                        torch.Size([4, 900, 256])
-        # outputs['pred_boxes'].shape:                         torch.Size([4, 900, 4])
-        # outputs['text_mask'].shape:                          torch.Size([256])
-        # outputs['aux_outputs'][0].keys():                    dict_keys(['pred_logits', 'pred_boxes', 'one_hot', 'text_mask'])
-        # outputs['aux_outputs'][img_idx]
-        # outputs['token']:                                    <class 'transformers.tokenization_utils_base.BatchEncoding'>
-        # outputs['interm_outputs'].keys():                    dict_keys(['pred_logits', 'pred_boxes', 'one_hot', 'text_mask'])
-        # outputs['interm_outputs_for_matching_pre'].keys():   dict_keys(['pred_logits', 'pred_boxes'])
-        # outputs['one_hot'].shape:                            torch.Size([4, 900, 256])
         return out
 
     @torch.jit.unused
