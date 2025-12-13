@@ -1,0 +1,92 @@
+# OS and editor cruft
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Python bytecode and packaging
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pkl
+*.egg-info/
+.eggs/
+*.egg
+*.whl
+*.manifest
+*.spec
+*.ipynb_checkpoints/
+venv/
+.venv/
+env/
+.env
+
+# Build and compiled artifacts
+build/
+Build/
+dist/
+*.so
+*.dylib
+*.a
+*.o
+*.obj
+*.ninja_deps
+*.ninja_log
+cmake-build*/
+CMakeFiles/
+CMakeCache.txt
+*.cmake
+Makefile
+models/GroundingDINO/ops/build/
+
+# Logs and runtime traces
+logs/
+log/
+*.log
+*.out
+*.err
+*.trace
+*.prof
+*.profile
+*.pid
+nohup.out
+
+# Experiment outputs and learned weights (can leak run metadata)
+runs/
+outputs/
+output/
+results/
+experiments/
+checkpoints/
+wandb/
+tensorboard/
+tb_logs/
+events.out.tfevents*
+*.ckpt
+*.pth
+*.pt
+*.bin
+*.onnx
+*.npz
+*.npy
+
+# Data that may contain sensitive or non-anonymized content
+data/
+datasets/
+datasets_dino/
+
+# Caches
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Temporary or backup files
+*.tmp
+*.bak
+*.orig
+
+
