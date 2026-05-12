@@ -7,9 +7,16 @@
   <a href="https://arxiv.org/abs/2503.13794">
     <img src="https://img.shields.io/badge/arXiv-2503.13794-b31b1b.svg" alt="arXiv">
   </a>
+  <a href="https://etayang10th.github.io/led-ovd.github.io/">
+    <img src="https://img.shields.io/badge/Blog-led--ovd.github.io-1a56db?logo=github&logoColor=white" alt="LED blog">
+  </a>
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License">
   </a>
+</p>
+
+<p align="center">
+  <b>Project page / Blog:</b> <a href="https://etayang10th.github.io/led-ovd.github.io/">https://etayang10th.github.io/led-ovd.github.io/</a>
 </p>
 
 ---
