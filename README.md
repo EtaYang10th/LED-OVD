@@ -126,5 +126,22 @@ Point the launcher to this file via `--dataset_cfg config/dataset_config/mixed_o
 bash train.sh
 ```
 
+---
+
+## Citation
+
+If LED helps your research, please cite:
+
+```bibtex
+@misc{zhou2025led,
+  title         = {LED: LLM Enhanced Open-Vocabulary Object Detection without Human Curated Data Generation},
+  author        = {Zhou, Yang and Zhao, Shiyu and Chen, Yuxiao and Wang, Zhenting and Jin, Can and Metaxas, Dimitris N.},
+  year          = {2025},
+  eprint        = {2503.13794},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CV},
+  url           = {https://arxiv.org/abs/2503.13794}
+}
+```
 
 
